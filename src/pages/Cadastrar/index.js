@@ -11,6 +11,7 @@ const db = new DatabaseConnection.getConnection; //
 export default function Cadastrar() {
   const [todos, setTodos] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [inputTextGenero, setInputTextGenero] = useState('');
   const [operacao, setOperacao] = useState('Incluir');
   const [id, setId] = useState(null);
 
@@ -20,7 +21,7 @@ export default function Cadastrar() {
   useEffect(() => {
     db.transaction(tx => {
       tx.executeSql(
-        'CREATE TABLE IF NOT EXISTS filmes (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL)',
+        'CREATE TABLE IF NOT EXISTS filmes (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, genero TEXT NOT NULL)',
         [], //[]: Este é o array de parâmetros. Como não estamos usando nenhum parâmetro na consulta SQL, deixamos esse array vazio.
         () => console.log('Tabela criada com sucesso'),//retorno de  sucesso
         // '_' É um parâmetro que representa o resultado da transação SQL, por convenção utiliza-se o underscore. para indicar que estamos ignorando esse valor.
@@ -68,11 +69,12 @@ export default function Cadastrar() {
       db.transaction(
         tx => {
           tx.executeSql(
-            'INSERT INTO filmes (nome) VALUES (?)',
-            [inputText],
+            'INSERT INTO filmes (nome, genero) VALUES (?,?)',
+            [inputText, inputTextGenero],
             (_, { rowsAffected }) => {
               console.log(rowsAffected);
-              setInputText('');       
+              setInputText(''); 
+              setInputTextGenero(''); 
               Alert.alert('Inserido com sucesso!');
             },
             (_, error) => {
@@ -184,12 +186,18 @@ export default function Cadastrar() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.androidSafeArea}>
         <View style={styles.container}>
-
+          <Text style={styles.title} >Cadastre um Filme</Text>
           <TextInput
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
             placeholder="Digite um novo filme"
+          />
+          <TextInput
+            style={styles.input}
+            value={inputTextGenero}
+            onChangeText={setInputTextGenero}
+            placeholder="Digite o genero"
           />
           <Button title='Salvar Filme' onPress={Cadastrar} />
 
@@ -202,6 +210,7 @@ export default function Cadastrar() {
               <View key={filme.id} style={styles.filmeItem}>
                 <Text>{filme.id}</Text>
                 <Text>{filme.nome}</Text>
+                <Text>{filme.genero}</Text>
                 {/* <View style={styles.buttonTable}>
                   <TouchableOpacity onPress={() => {
                     buttonPress(filme.nome), setId(filme.id), setOperacao('Editar')

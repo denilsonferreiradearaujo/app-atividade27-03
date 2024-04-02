@@ -12,6 +12,7 @@ const db = new DatabaseConnection.getConnection; //
 export default function ExibirRegistros() {
   const [todos, setTodos] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [inputTextGenero, setInputTextGenero] = useState('');
   const [operacao, setOperacao] = useState('Incluir');
   const [id, setId] = useState(null);
 
@@ -21,7 +22,7 @@ export default function ExibirRegistros() {
   // useEffect(() => {
   //   db.transaction(tx => {
   //     tx.executeSql(
-  //       'CREATE TABLE IF NOT EXISTS filmes (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL)',
+  //       'CREATE TABLE IF NOT EXISTS filmes (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, genero TEXT NOT NULL)',
   //       [], //[]: Este é o array de parâmetros. Como não estamos usando nenhum parâmetro na consulta SQL, deixamos esse array vazio.
   //       () => console.log('Tabela criada com sucesso'),//retorno de  sucesso
   //       // '_' É um parâmetro que representa o resultado da transação SQL, por convenção utiliza-se o underscore. para indicar que estamos ignorando esse valor.
@@ -71,29 +72,28 @@ export default function ExibirRegistros() {
     console.log('Acionando a função PesquisarFilme normalmente!')
 
     if (inputText.trim() === '') {
-      Alert.alert('Erro', 'Por favor, insira um texto válido para adicionar o filme');
+      Alert.alert('Erro', 'Por favor, insira um texto válido para pesuisar o filme');
+      ExibirRegistros()
       return;
 
     } else {
       db.transaction(
         tx => {
           tx.executeSql(
-            'SELECT FROM filmes where id=?',
-            [id],
-            (_, { rowsAffected }) => {
-              console.log(rowsAffected);
-              setInputText('');
-              atualizaRegistros();
+            'SELECT * FROM filmes where nome=? or genero=?',
+            [inputText, inputText],
+            (_, { rows }) => {
+              // O '_array' é uma propriedade desse objeto que contém os resultados da consulta em forma de array.
+              setTodos(rows._array);
+              console.log(rows._array);
             },
             (_, error) => {
-              console.error('Erro ao adicionar filme:', error);
-              Alert.alert('Erro', 'Ocorreu um erro ao adicionar o filme.');
+              console.error('Erro ao pesquisar filme:', error);
+              Alert.alert('Erro', 'Ocorreu um erro ao pesquisar o filme.');
             }
           );
         }
       );
-
-      // Alert.alert('Inserido com sucesso!');
 
       return;
     }
@@ -139,6 +139,39 @@ export default function ExibirRegistros() {
 
   };
 
+  // Função utilizada para editar um registro
+  const SalvarEdicao = () => {
+    console.log('Acionando a função SalvarEdição!')
+
+    if (inputText.trim() === '') {
+      Alert.alert('Erro', 'Por favor, insira um texto válido para pesuisar o filme');
+      ExibirRegistros()
+      return;
+
+    } else {
+      db.transaction(
+        tx => {
+          tx.executeSql(
+            'UPDATE filmes SET nome=? WHERE id=?',
+            [inputText, id],
+            (_, { rowsAffected }) => {
+              console.log(rowsAffected);
+              // setInputText('');
+              // ExibirRegistros();
+              // setOperacao('Incluir');
+            },
+            (_, error) => {
+              console.error('Erro ao adicionar cliente:', error);
+              Alert.alert('Erro', 'Ocorreu um erro ao adicionar o cliente.');
+            }
+          );
+        }
+      );
+
+      return;
+    }
+  };
+
   // Função utilizada para excluir um registro
   const excluirfilme = (id) => {
     db.transaction(tx => {
@@ -160,37 +193,36 @@ export default function ExibirRegistros() {
     })
   }
 
-  // const buttonPress = (nome) => {
-  //   setInputText(nome);
-  // }
+  const buttonPress = (nome) => {
+    setInputText(nome);
+  }
 
   // Função utilizada para exluir tabelas e banco
+  const deleteDatabase = () => {
+    db.transaction(tx => {
+      tx.executeSql(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ",
+        [],
+        (_, { rows }) => {
+          rows._array.forEach(table => {
+            tx.executeSql(
+              `DROP TABLE IF EXISTS ${table.name}`,
+              [],
+              () => {
+                console.log(`Tabela ${table.name} excluida com sucesso!`);
+                setTodos([]);
+              },
+              (_, error) => {
+                console.error(`Erro ao exluir o registro ${table.name} :`, error);
+                Alert.alert('Erro', `Ocorreu um erro ao ecluir a tabela ${table.name}`);
+              }
+            )
 
-  // const deleteDatabase = () => {
-  //   db.transaction(tx => {
-  //     tx.executeSql(
-  //       "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ",
-  //       [],
-  //       (_, {rows}) => {
-  //         rows._array.forEach(table => {
-  //           tx.executeSql(
-  //             `DROP TABLE IF EXISTS ${table.name}`,
-  //             [],
-  //             () => {
-  //               console.log(`Tabela ${table.name} excluida com sucesso!`);
-  //               setTodos([]);
-  //             },
-  //             (_, error) => {
-  //               console.error(`Erro ao exluir o registro ${table.name} :`, error);
-  //               Alert.alert('Erro', `Ocorreu um erro ao ecluir a tabela ${table.name}`);
-  //             }
-  //           )
-
-  //         });
-  //       }
-  //     )
-  //   })
-  // }
+          });
+        }
+      )
+    })
+  }
 
   return (
     <SafeAreaProvider>
@@ -201,9 +233,15 @@ export default function ExibirRegistros() {
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
-            placeholder="Digite um filme para pesquisar "
+            placeholder="Pesquise pot um Filme ou Genero "
           />
-          <Button title='Pesquisar filme' onPress={PesquisarFilme} />
+          {/* <TextInput
+            style={styles.input}
+            value={inputTextGenero}
+            onChangeText={setInputTextGenero}
+            placeholder="Pesquisar por Genero"
+          /> */}
+          <Button title='Pesquisar' onPress={PesquisarFilme} />
 
           <Text style={styles.title}>Filmes Cadastrados</Text>
         </View>
@@ -213,12 +251,15 @@ export default function ExibirRegistros() {
             {todos.map(filme => (
               <View key={filme.id} style={styles.filmeItem}>
                 <Text>{filme.id}</Text>
-                <Text>{filme.nome}</Text>
+                <TextInput>{filme.nome}</TextInput>
+                <TextInput>{filme.genero}</TextInput>
                 <View style={styles.buttonTable}>
                   <TouchableOpacity onPress={() => {
-                    buttonPress(filme.nome), setId(filme.id)
+                    // buttonPress(filme.nome), setId(filme.id), setOperacao('Editar')
+
+                    <Button title='Pesquisar' onPress={SalvarEdicao} />
                   }}>
-                    <FontAwesome6 name='pen-to-square' color='gray' size={24} />
+                    <FontAwesome6 name='save' color='green' size={25} />
                   </TouchableOpacity>
 
                   {/* Dentro do onPress do botão, colocamos um alert perguntando ao usuário se deseja excluir o registro selecionado */}
@@ -248,7 +289,7 @@ export default function ExibirRegistros() {
           </View>
         </ScrollView>
 
-        {/* <TouchableOpacity onPress={() => {
+        <TouchableOpacity onPress={() => {
           Alert.alert(
             "Atenção!",
             'Deseja excluir o banco de dados do sistema? Está ação nao poderá ser desfeita',
@@ -266,8 +307,9 @@ export default function ExibirRegistros() {
           )
 
         }}>
-          <FontAwesome6 name='eraser' color='red' size={40} />
-        </TouchableOpacity> */}
+          <FontAwesome6 name='eraser' color='#333' size={40} />
+          <Text>Deletar todos</Text>
+        </TouchableOpacity>
       </SafeAreaView>
 
     </SafeAreaProvider>
